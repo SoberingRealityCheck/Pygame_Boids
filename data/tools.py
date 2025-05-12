@@ -7,7 +7,7 @@ import os
 import pygame as pg
 
 # Import State Machine
-# from . import state_machine
+from . import state_machine
 
 TIME_PER_UPDATE = 16.0 #Milliseconds
 
@@ -26,17 +26,19 @@ class Control(object):
         self.now = 0.0
         self.keys = pg.key.get_pressed()
         self.mouse = pg.mouse.get_pos()
-        # State Machine
+        self.state_machine = state_machine.StateMachine()
+        self.state_machine.setup_states({None:state_machine._State}, None)
     
     def update(self):
         '''
         Update the game state.
         '''
         self.now = pg.time.get_ticks()
-        # State Machine
+        self.state_machine.update(self.keys, self.now)
     
     def draw(self, interpolate):
-        if not self.done:
+        if not self.state_machine.state.done:
+            self.state_machine.draw(self.screen, interpolate)
             pg.display.update()
             self.show_fps()
     
@@ -53,7 +55,7 @@ class Control(object):
                 self.toggle_show_fps(event.key)
             elif event.type == pg.KEYUP:
                 self.keys = pg.key.get_pressed()
-            # State Machine
+            self.state_machine.get_event(event)
     
     def toggle_show_fps(self, key):
         '''

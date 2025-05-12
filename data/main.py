@@ -6,8 +6,14 @@ import os
 print(os.getcwd())
 
 from . import tools, prepare
+from .states import title, splash, game
 
 def main():
     print("Hello, world!")
     app = tools.Control(prepare.ORIGINAL_CAPTION)
+    state_dict = {
+                "SPLASH"  : splash.Splash(),
+                "TITLE"   : title.Title(),
+                }
+    app.state_machine.setup_states(state_dict, "SPLASH")
     app.main()
