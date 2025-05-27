@@ -137,7 +137,7 @@ def boid_update(positions, velocities):
 
         # Combine rules with weights
         steer = (
-            100 * separation +
+            7 * separation +
             1.0 * alignment +
             1.0 * cohesion
         )
