@@ -17,8 +17,6 @@ class Boid:
         # Calculate and apply separation, alignment, cohesion
         pass
 
-    
-
 class BoidFlock:
     def __init__(self, num_boids, width=800, height=600):
         self.num_boids = num_boids
@@ -34,6 +32,15 @@ class BoidFlock:
             self.positions, self.velocities
         )
         self.positions = loop_out_of_bounds(self.positions, self.width, self.height)
+    
+    def add_boid(self, position=None, velocity=None):
+        if position is None:
+            position = np.random.rand(2) * [self.width, self.height]
+        if velocity is None:
+            velocity = (np.random.rand(2) - 0.5) * 10
+        self.positions = np.vstack((self.positions, position))
+        self.velocities = np.vstack((self.velocities, velocity))
+        self.num_boids += 1
     
     def draw(self, surface):
         if not BOIDS_VISIBLE:
@@ -59,10 +66,81 @@ def boid_update(positions, velocities):
     N = positions.shape[0]
     new_positions = positions.copy()
     new_velocities = velocities.copy()
-    # Example: simple movement, replace with flocking logic
+
+    # Parameters
+    separation_dist = 25.0
+    alignment_dist = 50.0
+    cohesion_dist = 50.0
+    max_speed = 4.0
+    max_force = 0.05
+
     for i in prange(N):
-        # Compute separation, alignment, cohesion here using array ops
-        new_positions[i] += new_velocities[i]
+        pos = positions[i]
+        vel = velocities[i]
+
+        # Initialize rule vectors
+        separation = np.zeros(2)
+        alignment = np.zeros(2)
+        cohesion = np.zeros(2)
+        total_sep = 0
+        total_ali = 0
+        total_coh = 0
+
+        for j in range(N):
+            if i == j:
+                continue
+            diff = positions[j] - pos
+            dist = np.linalg.norm(diff)
+            if dist < 1e-5:
+                continue
+
+            # Separation
+            if dist < separation_dist:
+                separation -= (diff) / dist
+                total_sep += 1
+
+            # Alignment
+            if dist < alignment_dist:
+                alignment += velocities[j]
+                total_ali += 1
+
+            # Cohesion
+            if dist < cohesion_dist:
+                cohesion += positions[j]
+                total_coh += 1
+
+        # Finalize rule vectors
+        if total_sep > 0:
+            separation /= total_sep
+        if total_ali > 0:
+            alignment /= total_ali
+            alignment = alignment / (np.linalg.norm(alignment) + 1e-8) * max_speed - vel
+        if total_coh > 0:
+            cohesion /= total_coh
+            cohesion = cohesion - pos
+            cohesion = cohesion / (np.linalg.norm(cohesion) + 1e-8) * max_speed - vel
+
+        # Combine rules with weights
+        steer = (
+            1.5 * separation +
+            1.0 * alignment +
+            1.0 * cohesion
+        )
+
+        # Limit steering force
+        norm = np.linalg.norm(steer)
+        if norm > max_force:
+            steer = steer / norm * max_force
+
+        # Update velocity and position
+        new_vel = vel + steer
+        speed = np.linalg.norm(new_vel)
+        if speed > max_speed:
+            new_vel = new_vel / speed * max_speed
+
+        new_velocities[i] = new_vel
+        new_positions[i] = pos + new_vel
+
     return new_positions, new_velocities
 
 @njit(parallel=True)

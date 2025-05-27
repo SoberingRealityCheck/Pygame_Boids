@@ -27,6 +27,9 @@ class Game(state_machine._State):
         """Update the game state."""
         self.now = now
         self.flock.update(now)
+        if pg.mouse.get_pressed()[0]:
+            mouse_pos = pg.mouse.get_pos()
+            self.flock.add_boid(mouse_pos)
         # Game logic goes here
 
     def draw(self, surface, interpolate):
