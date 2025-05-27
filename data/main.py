@@ -14,6 +14,7 @@ def main():
     state_dict = {
                 "SPLASH"  : splash.Splash(),
                 "TITLE"   : title.Title(),
+                "GAME"    : game.Game(),
                 }
     app.state_machine.setup_states(state_dict, "SPLASH")
     app.main()

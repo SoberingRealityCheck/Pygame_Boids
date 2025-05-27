@@ -15,7 +15,6 @@ cleanly structure a large and complex pygame project that will give me a lot of 
 
 import sys
 import pygame as pg
-
 from data.main import main 
 
 if __name__ == "__main__":

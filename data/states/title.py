@@ -25,6 +25,12 @@ class Title(state_machine._State):
     
     def update(self, keys, now):
         self.now = now
+        self.elements.update(now)
+        for element in self.elements:
+            if element.done:
+                self.done = True
+                self.next = element.next
+                break
     
     def draw(self, surface, interpolate):
         surface.fill(SPACE_COLOR, SPACE_RECT)
@@ -46,15 +52,31 @@ class StartButton(pg.sprite.Sprite):
     def __init__(self, *groups):
         pg.sprite.Sprite.__init__(self, *groups)
         self.raw_image = render_font("PixelifySans", 30, "Start", (0, 255, 255))
+        self.hover_image = render_font("PixelifySans", 30, "Start", (255, 255, 0))
         self.null_image = pg.Surface((1,1)).convert_alpha()
         self.null_image.fill((0,0,0,0))
         self.image = self.raw_image
         center = (prepare.SCREEN_RECT.centerx, prepare.SCREEN_RECT.centery+50)
         self.rect = self.image.get_rect(center=center)
-        self.blink = False
+        self.hover = False
+        self.done = False
+        self.next = "GAME"
+    
+    def check_hover(self, mouse):
+        """
+        Check if the mouse is hovering over the button.
+        """
+        self.hover = self.rect.collidepoint(mouse)
+    
+    def check_click(self):
+        if self.hover and pg.mouse.get_pressed()[0]:
+            self.done = True
+            
     
     def update(self, now, *args):
-        self.image = self.raw_image
+        self.check_hover(pg.mouse.get_pos())
+        self.image = self.raw_image if self.hover else self.hover_image
+        self.check_click()
 
 def render_font(font, size, msg, color=(255,255,255)):
         """
