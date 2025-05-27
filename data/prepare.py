@@ -15,7 +15,7 @@ pg.init()
 
 SCREEN_SIZE = (1200, 700)
 ORIGINAL_CAPTION = "Boids"
-BACKGROUND_COLOR = (20, 20, 20)
+BACKGROUND_COLOR = (10, 10, 10)
 SCREEN_RECT = pg.Rect((0, 0), SCREEN_SIZE)
 _FONT_PATH = os.path.join("resources", "fonts", "PixelifySans.ttf")
 BIG_PIXEL_FONT = pg.font.Font(_FONT_PATH, 80)

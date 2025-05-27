@@ -19,10 +19,17 @@ class Game(state_machine._State):
         """Initialize the game state."""
         self.persist = persistent
         self.start_time = now
-        self.flock = BoidFlock(num_boids=100, width=prepare.SCREEN_RECT.width, height=prepare.SCREEN_RECT.height)
+        self.flock = BoidFlock(num_boids=100)
         print("Game started at:", self.start_time)
+        self.elements = self.make_elements()
         self.now = now
 
+    def make_elements(self):
+        """Create the elements for the game state."""
+        group = pg.sprite.LayeredUpdates()
+        group.add(BoidCounter(self.flock), layer=1)
+        return group
+    
     def update(self, keys, now):
         """Update the game state."""
         self.now = now
@@ -36,4 +43,22 @@ class Game(state_machine._State):
         """Draw the game state."""
         surface.fill(prepare.BACKGROUND_COLOR)
         self.flock.draw(surface)
+        for element in self.elements:
+            element.draw(surface)
         # Drawing code goes here
+
+class BoidCounter(pg.sprite.Sprite):
+    """
+    A simple class to count the number of boids in the flock.
+    """
+    def __init__(self, flock, *groups):
+        pg.sprite.Sprite.__init__(self, *groups)
+        self.flock = flock
+
+    def count(self):
+        return self.flock.num_boids
+    
+    def draw(self, surface):
+        count_text = f"Boids: {self.count()}"
+        text_surface = prepare.PIXEL_FONT.render(count_text, True, pg.Color("white"))
+        surface.blit(text_surface, (10, 10))

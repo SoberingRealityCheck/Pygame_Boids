@@ -50,6 +50,8 @@ class Control(object):
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.done = True
+            elif event.type == pg.VIDEORESIZE:
+                self.screen = pg.display.set_mode(event.size, pg.RESIZABLE)
             elif event.type == pg.KEYDOWN:
                 self.keys = pg.key.get_pressed()
                 self.toggle_show_fps(event.key)

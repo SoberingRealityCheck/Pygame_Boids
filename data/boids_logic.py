@@ -18,14 +18,17 @@ class Boid:
         pass
 
 class BoidFlock:
-    def __init__(self, num_boids, width=800, height=600):
+    def __init__(self, num_boids):
         self.num_boids = num_boids
-        self.width = width
-        self.height = height
-        self.positions = np.random.rand(num_boids, 2)  # Example screen size
-        self.positions[:, 0] *= width
-        self.positions[:, 1] *= height # Scale positions to screen size
+        self.width = 1200
+        self.height = 800
+        self.positions = np.random.rand(num_boids, 2)
+        self.positions[:, 0] *= self.width
+        self.positions[:, 1] *= self.height # Scale positions to full world size
         self.velocities = (np.random.rand(num_boids, 2) - 0.5) * 10
+        self.scale_x = 1.0
+        self.scale_y = 1.0
+
 
     def update(self, now):
         self.positions, self.velocities = boid_update(
@@ -38,6 +41,11 @@ class BoidFlock:
             position = np.random.rand(2) * [self.width, self.height]
         if velocity is None:
             velocity = (np.random.rand(2) - 0.5) * 10
+        # Scale position to window size
+        scaled_x = position[0] / self.scale_x
+        scaled_y = position[1] / self.scale_y
+        position = (scaled_x, scaled_y)
+        
         self.positions = np.vstack((self.positions, position))
         self.velocities = np.vstack((self.velocities, velocity))
         self.num_boids += 1
@@ -45,10 +53,17 @@ class BoidFlock:
     def draw(self, surface):
         if not BOIDS_VISIBLE:
             return
+        # Get surface dimensions
+        current_window_height = surface.get_height()
+        current_window_width = surface.get_width()
+        
+        self.scale_x = current_window_width / self.width
+        self.scale_y = current_window_height / self.height
         # Draw the boid on the surface
+        
         for pos in self.positions:
             x, y = pos
-            render_position = (int(x), int(y))
+            render_position = (int(x * self.scale_x), int(y * self.scale_y))
             width, height = self.width, self.height
             if BLOOM_ON:
                     bloom_color = [float(55 * x / width), float(55 * y / height), 20]
@@ -68,7 +83,7 @@ def boid_update(positions, velocities):
     new_velocities = velocities.copy()
 
     # Parameters
-    separation_dist = 25.0
+    separation_dist = 35
     alignment_dist = 50.0
     cohesion_dist = 50.0
     max_speed = 4.0
@@ -122,7 +137,7 @@ def boid_update(positions, velocities):
 
         # Combine rules with weights
         steer = (
-            1.5 * separation +
+            100 * separation +
             1.0 * alignment +
             1.0 * cohesion
         )
