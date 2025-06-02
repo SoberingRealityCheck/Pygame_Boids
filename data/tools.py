@@ -33,8 +33,9 @@ class Control(object):
         '''
         Update the game state.
         '''
+        self.mouse = pg.mouse.get_pos()
         self.now = pg.time.get_ticks()
-        self.state_machine.update(self.keys, self.now)
+        self.state_machine.update(self.keys, self.now, self.mouse)
     
     def draw(self, interpolate):
         if not self.state_machine.state.done:
@@ -45,13 +46,15 @@ class Control(object):
     def event_loop(self):
         '''
         Handle events and pass them to the state machine.
-        f5 toggles the FPS display.
+        f5 toggles the FPS display. F11 toggles fullscreen. esc quits the game.
         '''
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.done = True
             elif event.type == pg.VIDEORESIZE:
-                self.screen = pg.display.set_mode(event.size, pg.RESIZABLE)
+                if not pg.display.get_surface().get_flags() & pg.FULLSCREEN:
+                    self.screen = pg.display.set_mode(event.size, pg.RESIZABLE)
+                    self.screen = pg.display.get_surface()
             elif event.type == pg.KEYDOWN:
                 self.keys = pg.key.get_pressed()
                 self.toggle_show_fps(event.key)
@@ -61,12 +64,21 @@ class Control(object):
     
     def toggle_show_fps(self, key):
         '''
-        Toggle the FPS display.
+        Toggle the FPS display. I also stuck the fullscreen and exit toggles in here because it's more convenient than making a separate function for them.
+        And because I'm da boss. And I can do whatever I want.
         '''
         if key == pg.K_F5:
             self.fps_visible = not self.fps_visible
             if not self.fps_visible:
                 pg.display.set_caption(self.caption)
+        elif key == pg.K_F11:
+            if not pg.display.get_surface().get_flags() & pg.FULLSCREEN:
+                pg.display.set_mode((0, 0), pg.FULLSCREEN)
+            else:
+                pg.display.set_mode((800,800), pg.RESIZABLE)
+            self.screen = pg.display.get_surface()
+        elif key == pg.K_ESCAPE:
+            self.done = True
     
     def show_fps(self):
         '''

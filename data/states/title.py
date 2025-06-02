@@ -4,8 +4,7 @@ State for the Title scene.
 
 import pygame as pg
 
-from .. import prepare, state_machine, tools 
-
+from .. import prepare, state_machine, main
 SPACE_COLOR = (10, 10, 20)
 SPACE_RECT = pg.Rect(0, 0, 1200, 700)
 
@@ -23,9 +22,9 @@ class Title(state_machine._State):
         self.start_time = now
         self.elements = self.make_elements()
     
-    def update(self, keys, now):
+    def update(self, keys, now, mouse):
         self.now = now
-        self.elements.update(now)
+        self.elements.update(now, mouse)
         for element in self.elements:
             if element.done:
                 self.done = True
@@ -73,8 +72,8 @@ class StartButton(pg.sprite.Sprite):
             self.done = True
             
     
-    def update(self, now, *args):
-        self.check_hover(pg.mouse.get_pos())
+    def update(self, now, mouse, *args):
+        self.check_hover(mouse)
         self.image = self.raw_image if self.hover else self.hover_image
         self.check_click()
 

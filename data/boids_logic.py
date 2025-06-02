@@ -18,7 +18,7 @@ class Boid:
         pass
 
 class BoidFlock:
-    def __init__(self, num_boids):
+    def __init__(self, num_boids, weights=None):
         self.num_boids = num_boids
         self.width = 1200
         self.height = 800
@@ -28,12 +28,31 @@ class BoidFlock:
         self.velocities = (np.random.rand(num_boids, 2) - 0.5) * 10
         self.scale_x = 1.0
         self.scale_y = 1.0
-
-
+        # Initialize the weights with starting values
+        self.sep_weight = 2.0  # Weight for separation rule
+        self.ali_weight = 1.0
+        self.coh_weight = 1.0
+        # Radius for each rule
+        self.sep_radius = 20.0
+        self.ali_radius = 50.0
+        self.coh_radius = 50.0
+        # Maximum speed and force
+        self.max_speed = 10.0
+        self.max_force = 0.1
+        # Mass of each boid
+        self.boid_mass = 5.0
+        if weights is not None:
+            for key in weights:
+                if key in ['sep_weight', 'ali_weight', 'coh_weight',
+                                    'sep_radius', 'ali_radius', 'coh_radius', 
+                                    'max_speed', 'max_force', 'boid_mass']:
+                    setattr(self, key, weights[key])
+    
     def update(self, now):
-        self.positions, self.velocities = boid_update(
-            self.positions, self.velocities
-        )
+        self.positions, self.velocities = boid_update(self.positions, self.velocities, self.sep_weight,
+                                                    self.ali_weight, self.coh_weight,
+                                                    self.sep_radius, self.ali_radius, self.coh_radius,
+                                                    self.max_speed, self.max_force, self.boid_mass)
         self.positions = loop_out_of_bounds(self.positions, self.width, self.height)
     
     def add_boid(self, position=None, velocity=None):
@@ -77,23 +96,23 @@ class BoidFlock:
 
 
 @njit(parallel=True)
-def boid_update(positions, velocities):
+def boid_update(positions, velocities, sep_weight, ali_weight, coh_weight,
+                 separation_dist, alignment_dist, cohesion_dist,
+                 max_speed, max_force, boid_mass):
+    """
+    Update all boid positions and velocities using the three flocking rules:
+    separation, alignment, and cohesion.
+    """
+    
     N = positions.shape[0]
     new_positions = positions.copy()
     new_velocities = velocities.copy()
-
-    # Parameters
-    separation_dist = 35
-    alignment_dist = 50.0
-    cohesion_dist = 50.0
-    max_speed = 4.0
-    max_force = 0.05
 
     for i in prange(N):
         pos = positions[i]
         vel = velocities[i]
 
-        # Initialize rule vectors
+        # Initialize rule vectors and neighbor counters
         separation = np.zeros(2)
         alignment = np.zeros(2)
         cohesion = np.zeros(2)
@@ -101,6 +120,7 @@ def boid_update(positions, velocities):
         total_ali = 0
         total_coh = 0
 
+        # Loop over all other boids to compute rule effects
         for j in range(N):
             if i == j:
                 continue
@@ -109,50 +129,60 @@ def boid_update(positions, velocities):
             if dist < 1e-5:
                 continue
 
-            # Separation
+            # Separation: steer away from close neighbors
             if dist < separation_dist:
-                separation -= (diff) / dist
+                if dist > 0:
+                    separation -= (diff) / (dist * dist)
+                else:
+                    separation -= 1 # Avoid division by zero
                 total_sep += 1
 
-            # Alignment
+            # Alignment: match velocity with nearby boids
             if dist < alignment_dist:
                 alignment += velocities[j]
                 total_ali += 1
 
-            # Cohesion
+            # Cohesion: move toward the average position of nearby boids
             if dist < cohesion_dist:
                 cohesion += positions[j]
                 total_coh += 1
 
-        # Finalize rule vectors
-        if total_sep > 0:
-            separation /= total_sep
+        # Average and finalize rule vectors
+        norm_sep = np.linalg.norm(separation)
+        if norm_sep > 0:
+            separation = separation / norm_sep * max_speed - vel
         if total_ali > 0:
             alignment /= total_ali
+            # Desired velocity for alignment
             alignment = alignment / (np.linalg.norm(alignment) + 1e-8) * max_speed - vel
         if total_coh > 0:
             cohesion /= total_coh
+            # Desired velocity toward center of mass
             cohesion = cohesion - pos
             cohesion = cohesion / (np.linalg.norm(cohesion) + 1e-8) * max_speed - vel
 
-        # Combine rules with weights
+        # Combine the three rules with weights
         steer = (
-            7 * separation +
-            1.0 * alignment +
-            1.0 * cohesion
+            sep_weight * separation +   
+            ali_weight * alignment +
+            coh_weight * cohesion
         )
 
-        # Limit steering force
+        # Limit the steering force to max_force
         norm = np.linalg.norm(steer)
         if norm > max_force:
             steer = steer / norm * max_force
+        
+        # Scale steering by boid mass
+        steer /= boid_mass
 
-        # Update velocity and position
+        # Update velocity with steering, limit to max_speed
         new_vel = vel + steer
         speed = np.linalg.norm(new_vel)
         if speed > max_speed:
             new_vel = new_vel / speed * max_speed
 
+        # Update arrays with new velocity and position
         new_velocities[i] = new_vel
         new_positions[i] = pos + new_vel
 
@@ -164,6 +194,7 @@ def loop_out_of_bounds(positions, width, height):
     Loop all positions around if they go out of bounds.
     positions: numpy array of shape (N, 2)
     """
+    # Use modulo to wrap positions around the world edges
     positions[:, 0] = np.mod(positions[:, 0], width)
     positions[:, 1] = np.mod(positions[:, 1], height)
     return positions

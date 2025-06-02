@@ -17,7 +17,7 @@ class Splash(state_machine._State):
         self.image.set_alpha(self.alpha)
         self.rect = self.image.get_rect(center=prepare.SCREEN_RECT.center)
         
-    def update(self, keys, now):
+    def update(self, keys, now, mouse):
         """Updates the splash screen."""
         self.now = now
         self.alpha = min(self.alpha+self.alpha_speed, 255)
