@@ -20,7 +20,7 @@ SCREEN_RECT = pg.Rect((0, 0), SCREEN_SIZE)
 _FONT_PATH = os.path.join("resources", "fonts", "PixelifySans.ttf")
 BIG_PIXEL_FONT = pg.font.Font(_FONT_PATH, 80)
 PIXEL_FONT = pg.font.Font(_FONT_PATH, 20)
-BLOOM_ON = False # Whether to use bloom effect
+BLOOM_ON = True # Whether to use bloom effect
 BOIDS_VISIBLE = True # Whether to draw boids on the screen
 
 # Set up the display

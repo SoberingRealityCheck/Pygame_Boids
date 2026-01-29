@@ -41,18 +41,21 @@ class BoidFlock:
         self.max_force = 0.1
         # Mass of each boid
         self.boid_mass = 5.0
+        # Weight for centering force (pulls boids toward center of simulation)
+        self.center_weight = 0.1
         if weights is not None:
             for key in weights:
                 if key in ['sep_weight', 'ali_weight', 'coh_weight',
-                                    'sep_radius', 'ali_radius', 'coh_radius', 
-                                    'max_speed', 'max_force', 'boid_mass']:
+                                    'sep_radius', 'ali_radius', 'coh_radius',
+                                    'max_speed', 'max_force', 'boid_mass', 'center_weight']:
                     setattr(self, key, weights[key])
     
     def update(self, now):
         self.positions, self.velocities = boid_update(self.positions, self.velocities, self.sep_weight,
                                                     self.ali_weight, self.coh_weight,
                                                     self.sep_radius, self.ali_radius, self.coh_radius,
-                                                    self.max_speed, self.max_force, self.boid_mass)
+                                                    self.max_speed, self.max_force, self.boid_mass,
+                                                    self.center_weight, self.width, self.height)
         self.positions = loop_out_of_bounds(self.positions, self.width, self.height)
     
     def add_boid(self, position=None, velocity=None):
@@ -89,7 +92,7 @@ class BoidFlock:
                     #print("BLOOM COLOR", bloom_color)
                     pg.draw.circle(surface, bloom_color, render_position, 5)
                 
-            boid_color = [float(255 * x / width), float(255 * y / height), 200]
+            boid_color = [float(100 * x / width) + 155, float(100 * y / height) + 155, 255]
             #print("BOID COLOR", boid_color)
             pg.draw.circle(surface, boid_color, render_position, 1)
             pass
@@ -98,10 +101,11 @@ class BoidFlock:
 @njit(parallel=True)
 def boid_update(positions, velocities, sep_weight, ali_weight, coh_weight,
                  separation_dist, alignment_dist, cohesion_dist,
-                 max_speed, max_force, boid_mass):
+                 max_speed, max_force, boid_mass,
+                 center_weight, world_width, world_height):
     """
     Update all boid positions and velocities using the three flocking rules:
-    separation, alignment, and cohesion.
+    separation, alignment, and cohesion, plus a centering force.
     """
     
     N = positions.shape[0]
@@ -161,11 +165,21 @@ def boid_update(positions, velocities, sep_weight, ali_weight, coh_weight,
             cohesion = cohesion - pos
             cohesion = cohesion / (np.linalg.norm(cohesion) + 1e-8) * max_speed - vel
 
+        # Centering: steer toward the center of the world
+        center = np.array([world_width / 2.0, world_height / 2.0])
+        to_center = center - pos
+        dist_to_center = np.linalg.norm(to_center)
+        centering = np.zeros(2)
+        if dist_to_center > 0:
+            # Desired velocity toward center, scaled by distance from center
+            centering = to_center / dist_to_center * max_speed - vel
+
         # Combine the three rules with weights
         steer = (
-            sep_weight * separation +   
+            sep_weight * separation +
             ali_weight * alignment +
-            coh_weight * cohesion
+            coh_weight * cohesion +
+            center_weight * centering
         )
 
         # Limit the steering force to max_force

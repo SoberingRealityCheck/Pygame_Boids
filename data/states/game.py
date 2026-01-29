@@ -8,6 +8,8 @@ class Game(state_machine._State):
     """
     This state is updated while the game is running.
     """
+
+    BACKGROUND_COLOR = (0, 0, 0, 180)  # RGBA for semi-transparent background
     def __init__(self):
         state_machine._State.__init__(self)
         self.next = "TITLE"
@@ -90,7 +92,7 @@ class BoidParameterMenu(pg.sprite.Sprite):
     A fixed menu in the top right with draggable sliders to adjust BoidFlock parameters.
     """
     WIDTH = 220
-    HEIGHT = 180
+    HEIGHT = 210
 
     def __init__(self, flock, *groups):
         super().__init__(*groups)
@@ -102,6 +104,7 @@ class BoidParameterMenu(pg.sprite.Sprite):
             ("Separation", "sep_weight", 0.0, 10.0, 0.1),
             ("Alignment", "ali_weight", 0.0, 10.0, 0.1),
             ("Cohesion", "coh_weight", 0.0, 10.0, 0.1),
+            ("Centering", "center_weight", 0.0, 1.0, 0.01),
         ]
 
     def update_position(self, surface):
@@ -126,7 +129,7 @@ class BoidParameterMenu(pg.sprite.Sprite):
         # Create a transparent surface for the menu
         menu_surf = pg.Surface((self.WIDTH, self.HEIGHT), pg.SRCALPHA)
         # Draw semi-transparent background (RGBA)
-        menu_surf.fill((30, 30, 30, 180))  # 180/255 alpha for slight transparency
+        menu_surf.fill((30, 30, 40, 180))  # 180/255 alpha for slight transparency
 
         font = prepare.PIXEL_FONT
         # Optional: subtle title
