@@ -53,10 +53,23 @@ class Game(state_machine._State):
                 if hasattr(element, 'handle_event'):
                     element.handle_event(event)
     
+    def _apply_bloom(self, surface, intensity=0.5):
+        """Apply a screenwide bloom by downsampling, blurring, and blending back."""
+        w, h = surface.get_size()
+        # Two-pass bloom at different scales for a softer glow
+        for divisor in (8, 4):
+            small = pg.transform.smoothscale(surface, (w // divisor, h // divisor))
+            glow = pg.transform.smoothscale(small, (w, h))
+
+            glow.set_alpha(int(255 * intensity))
+            surface.blit(glow, (0, 0), special_flags=pg.BLEND_RGB_ADD)
+
     def draw(self, surface, interpolate):
         """Draw the game state."""
         surface.fill(prepare.BACKGROUND_COLOR)
         self.flock.draw(surface)
+        if self.flock.bloom_on:
+            self._apply_bloom(surface)
         for element in self.elements:
             if isinstance(element, BoidParameterMenu):
                 element.update_position(surface)
@@ -92,7 +105,12 @@ class BoidParameterMenu(pg.sprite.Sprite):
     A fixed menu in the top right with draggable sliders to adjust BoidFlock parameters.
     """
     WIDTH = 220
-    HEIGHT = 210
+    HEIGHT = 250
+    TITLE_HEIGHT = 30
+    SPACE_BETWEEN_SLIDERS = 30
+    SLIDER_WIDTH = 160
+    SLIDER_HEIGHT = 20
+    TOGGLE_SIZE = 16
 
     def __init__(self, flock, *groups):
         super().__init__(*groups)
@@ -115,12 +133,18 @@ class BoidParameterMenu(pg.sprite.Sprite):
     
     def handle_event(self, event):
         if event.type == pg.MOUSEBUTTONDOWN:
+            # Check bloom toggle
+            toggle_y = self.rect.y + self.TITLE_HEIGHT + len(self.params) * self.SPACE_BETWEEN_SLIDERS + 10
+            toggle_rect = pg.Rect(self.rect.x + 10, toggle_y, self.TOGGLE_SIZE, self.TOGGLE_SIZE)
+            if toggle_rect.collidepoint(event.pos):
+                self.flock.bloom_on = not self.flock.bloom_on
+                return
             for i, (label, attr, mn, mxv, step) in enumerate(self.params):
-                slider_rect = pg.Rect(self.rect.x + 10, self.rect.y + 40 + i*30, 160, 20)
+                slider_rect = pg.Rect(self.rect.x + 10, self.rect.y + 40 + i*self.SPACE_BETWEEN_SLIDERS, self.SLIDER_WIDTH, self.SLIDER_HEIGHT)
                 if slider_rect.collidepoint(event.pos):
                     rel_x = event.pos[0] - (self.rect.x + 10)
-                    rel_x = max(0, min(rel_x, 160))
-                    value = mn + (mxv - mn) * (rel_x / 160)
+                    rel_x = max(0, min(rel_x, self.SLIDER_WIDTH))
+                    value = mn + (mxv - mn) * (rel_x / self.SLIDER_WIDTH)
                     value = round(value / step) * step
                     setattr(self.flock, attr, value)
                     break
@@ -138,8 +162,8 @@ class BoidParameterMenu(pg.sprite.Sprite):
 
         # Draw minimal sliders
         for i, (label, attr, mn, mxv, step) in enumerate(self.params):
-            y = 32 + i * 28
-            slider_rect = pg.Rect(10, y, 140, 8)
+            y = self.TITLE_HEIGHT + i * self.SPACE_BETWEEN_SLIDERS
+            slider_rect = pg.Rect(10, y, self.SLIDER_WIDTH, self.SLIDER_HEIGHT)
             value = getattr(self.flock, attr)
             pct = (value - mn) / (mxv - mn)
             handle_x = int(slider_rect.x + pct * slider_rect.width)
@@ -153,6 +177,16 @@ class BoidParameterMenu(pg.sprite.Sprite):
             # Label (small, light)
             label_surf = font.render(f"{label[0]}: {value:.1f}", True, (200, 200, 200))
             menu_surf.blit(label_surf, (slider_rect.right + 8, y - 4))
+
+        # Bloom toggle checkbox
+        toggle_y = self.TITLE_HEIGHT + len(self.params) * self.SPACE_BETWEEN_SLIDERS + 10
+        toggle_rect = pg.Rect(10, toggle_y, self.TOGGLE_SIZE, self.TOGGLE_SIZE)
+        pg.draw.rect(menu_surf, (100, 100, 120, 180), toggle_rect, border_radius=2)
+        if self.flock.bloom_on:
+            inner = toggle_rect.inflate(-6, -6)
+            pg.draw.rect(menu_surf, (100, 200, 255, 220), inner, border_radius=1)
+        bloom_label = font.render("Bloom", True, (200, 200, 200))
+        menu_surf.blit(bloom_label, (10 + self.TOGGLE_SIZE + 8, toggle_y - 2))
 
         # Blit the menu surface onto the main surface
         surface.blit(menu_surf, (self.rect.x, self.rect.y))

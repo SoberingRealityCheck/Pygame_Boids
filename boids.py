@@ -16,8 +16,13 @@ cleanly structure a large and complex pygame project that will give me a lot of 
 import sys
 import pygame as pg
 from data.main import main 
+from argparse import ArgumentParser
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser(description="Boids Simulation")
+    parser.add_argument("--skip-intro", action="store_true", help="Skip the intro screen")
+    args = parser.parse_args()
+
+    main(skip_intro=args.skip_intro)
     pg.quit()
     sys.exit()

@@ -8,7 +8,7 @@ print(os.getcwd())
 from . import tools, prepare
 from .states import title, splash, game
 
-def main():
+def main(skip_intro=False):
     print("Hello, world!")
     app = tools.Control(prepare.ORIGINAL_CAPTION)
     state_dict = {

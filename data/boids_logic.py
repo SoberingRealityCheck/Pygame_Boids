@@ -3,19 +3,6 @@ import pygame as pg
 from numba import njit, prange
 from .prepare import BLOOM_ON, BOIDS_VISIBLE
 
-class Boid:
-    def __init__(self, position, velocity):
-        self.position = position  # Vector2
-        self.velocity = velocity  # Vector2
-
-    def update(self, boids):
-        # Apply boid rules to adjust velocity
-        self.flock(boids)
-        self.position += self.velocity
-
-    def flock(self, boids):
-        # Calculate and apply separation, alignment, cohesion
-        pass
 
 class BoidFlock:
     def __init__(self, num_boids, weights=None):
@@ -43,6 +30,7 @@ class BoidFlock:
         self.boid_mass = 5.0
         # Weight for centering force (pulls boids toward center of simulation)
         self.center_weight = 0.1
+        self.bloom_on = True
         if weights is not None:
             for key in weights:
                 if key in ['sep_weight', 'ali_weight', 'coh_weight',
@@ -87,10 +75,12 @@ class BoidFlock:
             x, y = pos
             render_position = (int(x * self.scale_x), int(y * self.scale_y))
             width, height = self.width, self.height
+            ''' 
             if BLOOM_ON:
                     bloom_color = [float(55 * x / width), float(55 * y / height), 20]
                     #print("BLOOM COLOR", bloom_color)
                     pg.draw.circle(surface, bloom_color, render_position, 5)
+            '''
                 
             boid_color = [float(100 * x / width) + 155, float(100 * y / height) + 155, 255]
             #print("BOID COLOR", boid_color)
